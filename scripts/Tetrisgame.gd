@@ -1,10 +1,9 @@
-extends TileMap
+extends Node2D
 
 func _ready():
 	
 	new_game()
 	pass 
-
 
 # Tetrominos!
 var bag = data.Tetros.values().duplicate()
@@ -42,15 +41,13 @@ var tile_id : int = 0
 var color_atlas : Vector2i
 var next_color_atlas : Vector2i
 
+@onready var board= $board
+@onready var active = $active
+@onready var preview = $preview
+
 var rows := 20
 var cols := 10
 var top := -2
-
-#Layers
-const board_layer : int = 0
-const active_layer : int = 1
-const preview_layer = 2
-
 
 #On starting a new game
 func new_game():
@@ -83,7 +80,7 @@ func pick_tetro():
 
 func draw_tetro(piece, pos : Vector2i, atlas : Vector2i):
 	for i in piece:
-		set_cell(active_layer, pos + i, tile_id, atlas)
+		active.set_cell(pos + i, tile_id, atlas)
 	pass
 
 
@@ -91,7 +88,7 @@ func move_tetro(dir):
 	if can_move(dir, cur_pos):
 		#clear prev tetro
 		for i in active_tetro:
-			erase_cell(active_layer, cur_pos + i)
+			active.erase_cell(cur_pos + i)
 		cur_pos += dir
 		draw_tetro(active_tetro, cur_pos, color_atlas)
 		
@@ -102,7 +99,7 @@ func move_tetro(dir):
 
 func rotate_tetro():
 	for i in active_tetro:
-		erase_cell(active_layer, cur_pos + i)
+		active.erase_cell(cur_pos + i)
 	
 	rotation_check((rot_index + 1) % 4)
 	
@@ -120,7 +117,7 @@ func rotation_check(new_rot):
 		var passed = true
 		
 		for tile_pos in tetro[new_rot]:
-			if not get_cell_source_id(board_layer, tile_pos + cur_pos + test_pos) == -1:
+			if not board.get_cell_source_id(tile_pos + cur_pos + test_pos) == -1:
 				passed = false
 				break
 		
@@ -137,14 +134,14 @@ func rotation_check(new_rot):
 func can_move(dir, pos):
 	var cm = true
 	for i in active_tetro:
-		if not get_cell_source_id(board_layer, i + dir + pos) == -1:
+		if not board.get_cell_source_id(i + dir + pos) == -1:
 			cm = false
 	return cm
 
 func land_piece():
 	for i in active_tetro:
-		erase_cell(active_layer, cur_pos + i)
-		set_cell(board_layer, cur_pos + i, tile_id, color_atlas)
+		active.erase_cell(cur_pos + i)
+		board.set_cell(cur_pos + i, tile_id, color_atlas)
 	row_check()
 	
 	tetro = pick_tetro()
@@ -155,7 +152,7 @@ func row_check():
 	var count = 0
 	for y in range(top, rows+1):
 		for x in range(1,cols+1):
-			if not get_cell_source_id(board_layer, Vector2i(x,y)) == -1:
+			if not board.get_cell_source_id(Vector2i(x,y)) == -1:
 				count += 1
 		if count == cols:
 			clear_row(y)
@@ -165,10 +162,10 @@ func clear_row(row):
 	var atlas
 	for y in range(row, top+1, -1):
 		for x in range(1, cols+1):
-			if not get_cell_source_id(board_layer, Vector2i(x,y-1)) == -1:
-				atlas = get_cell_atlas_coords(board_layer, Vector2i(x,y-1))
-				set_cell(board_layer, Vector2i(x,y), tile_id, atlas)
-			else: erase_cell(board_layer, Vector2i(x,y))
+			if not board.get_cell_source_id(Vector2i(x,y-1)) == -1:
+				atlas = board.get_cell_atlas_coords(Vector2i(x,y-1))
+				board.set_cell(Vector2i(x,y), tile_id, atlas)
+			else: board.erase_cell(Vector2i(x,y))
 
 func hard_drop():
 	var new_pos = cur_pos
@@ -177,10 +174,10 @@ func hard_drop():
 	return new_pos
 
 func draw_preview():
-	clear_layer(preview_layer)
+	preview.clear()
 	var preview_pos = hard_drop()
 	for p in active_tetro:
-		set_cell(preview_layer, preview_pos + p, tile_id, color_atlas)
+		preview.set_cell(preview_pos + p, tile_id, color_atlas)
 
 
 
@@ -228,7 +225,7 @@ func _process(delta):
 	
 	if Input.is_action_just_pressed("space"):
 		for i in active_tetro:
-			erase_cell(active_layer, cur_pos+i)
+			active.erase_cell(cur_pos+i)
 		
 		cur_pos = hard_drop()
 		land_piece()
